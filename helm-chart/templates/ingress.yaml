@@ -1,0 +1,54 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "tom-demo.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  labels:
+{{ include "tom-demo.labels" . | indent 4 }}
+  annotations:
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- if .Values.certManager.enabled }}
+    {{- if eq .Values.certManager.issuerKind "Issuer" }}
+    cert-manager.io/issuer: {{ .Values.certManager.issuerName | quote }}
+    {{- else }}
+    cert-manager.io/cluster-issuer: {{ .Values.certManager.issuerName | quote }}
+    {{- end }}
+    {{- end }}
+spec:
+  {{- if or .Values.ingress.tls .Values.certManager.enabled }}
+  tls:
+    {{- if .Values.ingress.tls }}
+    {{- range .Values.ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+    {{- else }}
+    - hosts:
+      {{- range .Values.ingress.hosts }}
+        - {{ .host | quote }}
+      {{- end }}
+      secretName: {{ default (printf "%s-tls" $fullName) .Values.certManager.tlsSecretName | quote }}
+    {{- end }}
+  {{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+        {{- range .paths }}
+        - path: {{ . }}
+          pathType: Prefix
+          backend:
+            service:
+              name: {{ $fullName }}
+              port:
+                name: http
+        {{- end }}
+  {{- end }}
+{{- end }}

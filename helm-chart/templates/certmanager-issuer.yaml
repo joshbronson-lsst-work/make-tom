@@ -1,0 +1,17 @@
+{{- if .Values.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: {{ .Values.certManager.issuerKind | default "ClusterIssuer" }}
+metadata:
+  name: {{ .Values.certManager.issuerName | quote }}
+spec:
+  acme:
+    email: {{ .Values.certManager.email | quote }}
+    server: {{ .Values.certManager.acmeServer | quote }}
+    privateKeySecretRef:
+      name: {{ include "tom-demo.fullname" . }}-acme-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: {{ .Values.certManager.http01.ingressClass | quote }}
+{{- end }}
+

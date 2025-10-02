@@ -1,0 +1,9 @@
+apiVersion: v2
+ # altered to be the git tag (if there is one) or  git commit SHA ID
+appVersion: local
+description: A Helm chart for the TOM Toolkit demostration TOM
+name: tom
+version: 1.0.0
+
+# for helm3, dependencies should be here in Chart.yaml and
+# requirements.yaml (where depencencies were for helm2) should go away

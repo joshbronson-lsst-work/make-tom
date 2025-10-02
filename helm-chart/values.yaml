@@ -1,0 +1,194 @@
+# Default values for tom-demo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+djangoDebug: true
+
+gunicornWorkers: 2
+gunicornTimeout: 300
+
+replicaCount: 1
+
+image:
+  repository: "docker.lco.global/tom-demo"
+  tag: stable
+  pullPolicy: IfNotPresent
+
+# Django WSGI module for your TOM, e.g., "TOM_NAME_HERE.wsgi".
+# This is required by the deployment template.
+wsgiModule: ""
+
+csrf_trusted_origins: []
+
+# Automatic certificate management via cert-manager
+# Set enabled=true and provide issuer details to have cert-manager
+# obtain and renew Let's Encrypt certificates for your ingress host(s).
+certManager:
+  enabled: false
+  # One of: ClusterIssuer or Issuer
+  issuerKind: ClusterIssuer
+  # Name of the (Cluster)Issuer resource to use
+  issuerName: letsencrypt-prod
+  # ACME account email
+  email: admin@example.com
+  # ACME directory URL (use staging for initial tests)
+  acmeServer: https://acme-v02.api.letsencrypt.org/directory
+  # HTTP-01 solver configuration
+  http01:
+    # Ingress class used by your NGINX controller
+    ingressClass: nginx-ingress-private
+  # TLS secret to be managed by cert-manager; if empty, defaults to
+  # "<fullname>-tls". You may also continue supplying
+  # ingress.tls[0].secretName to control it explicitly.
+  tlsSecretName: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# see https://helm.sh/docs/chart_best_practices/rbac/#rbac-resources-should-be-created-by-default
+rbac:
+  # Specifies whether Role-Based Access Control (RBAC) resources should be created
+  create: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.global-static-ip-name: tom-static-ip
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# Settings for the PostgreSQL database
+applyDatabaseMigrations: true
+database:
+  # If set, the chart will not create a CNPG Cluster and will instead use
+  # these explicit connection coordinates for DB_* environment variables.
+  host: ""
+  port: "5432"
+  name: app
+  user: app
+  # Optional: reference an existing Secret containing connection fields.
+  # When set, the application will take DB_USER/DB_NAME/DB_PASS from this
+  # Secret instead of inline values.
+  existingSecret: ""
+  secretKeys:
+    user: username
+    name: dbname
+    password: password
+
+# One-time/controlled data import into Postgres via pg_restore. Disabled by default.
+jobs:
+  import:
+    enabled: false
+    # If true, run only on post-install. If false, run on post-install and post-upgrade.
+    onlyOnInstall: true
+    # URL to the pg_dump custom-format file (e.g., gs://bucket/path/dump.pg or https://...).
+    dumpUrl: ""
+    # Image providing pg_restore (e.g., postgres:16 or bitnami/postgresql:16)
+    postgresImage: "postgres:16"
+    # Image providing curl/wget to fetch the dump
+    fetchImage: "curlimages/curl:8.11.1"
+
+# CloudNativePG Cluster resource and uses its read/write service as DB_HOST.
+cnpg:
+  nameOverride: cloudnative-pg
+  # Name for the CNPG Cluster; also used to compute the service hostname
+  # <clusterName>-rw for read/write connections.
+  clusterName: tom-db
+  # PostgreSQL container image to use for CNPG-managed pods.
+
+  # Be careful about removing this image: some assumptions about it
+  # are made in the chart.
+  # imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+  # Number of Postgres instances in the cluster.
+  instances: 1
+  storage:
+    size: 8Gi
+  # Database bootstrap configuration
+  bootstrap:
+    initdb:
+      enabled: true
+  # Optional superuser password (if omitted, CNPG generates one and stores
+  # it in the <clusterName>-superuser Secret)
+  superuser:
+    password: ""
+
+djangoDatabaseEngine: "django.db.backends.postgresql"
+postgresql:
+  # updated according to bitnami-packaged postgresql helm chart
+  # see helm-chart/requirements.yaml and documentation for that chart
+  auth:
+    postgresPassword: "changeme"
+    username: "postgres"
+    password: "changeme"
+    database: "postgres"
+  primary:
+    initdb:
+      scripts:
+        init_postgis.sh: |
+          #!/bin/sh
+          PGPASSWORD=$POSTGRES_PASSWORD psql -U postgres -c "create extension if not exists postgis;"
+    service:
+      port:
+        postgresql: "5432"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 400m
+        memory: 512Mi
+
+secretKey: "changeme"
+
+loadInitialData:
+  enabled: false
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

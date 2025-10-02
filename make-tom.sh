@@ -96,7 +96,14 @@ pip install --upgrade pip        # so we don't get reminded again and again
 #
 echo
 echo "${bold}Creating requirements.txt...${normal}"
-echo tomtoolkit > requirements.txt
+cat > requirements.txt <<EOF
+tomtoolkit
+gunicorn
+gevent
+greenlet
+psycopg2-binary
+whitenoise
+EOF
 
 echo
 echo "${bold}Installing tomtoolkit and dependencies into the virtual environment...${normal}"
@@ -161,6 +168,61 @@ else
         exit 0
     fi
 fi
+
+# 
+# 8. Create a TOM local settings file that will support Kubernetes.
+#
+cat >local_settings.py <<EOF
+import os
+
+# DEBUG is True by default to match behavior in settings.py
+DEBUG = os.getenv(
+    "DEBUG",
+    os.getenv("TOM_DEMO_DEBUG", "True")
+).lower() in ("1","true","yes","on")
+
+if "SECRET_KEY" in os.environ: 
+    SECRET_KEY = os.environ["SECRET_KEY"]
+
+ALLOWED_HOSTS = ['*']
+
+if "CSRF_TRUSTED_ORIGINS" in os.environ:
+    CSRF_TRUSTED_ORIGINS = [
+        u.strip() 
+        for u in os.environ["CSRF_TRUSTED_ORIGINS"].split(",") 
+        if u.strip()
+    ]
+
+if os.getenv("DB_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql", 
+            "NAME": os.getenv("DB_NAME","postgres"), 
+            "USER": os.getenv("DB_USER","postgres"), 
+            "PASSWORD": os.getenv("DB_PASS",""), 
+            "HOST": os.getenv("DB_HOST"), "PORT": os.getenv("DB_PORT","5432")
+        }
+    }
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
+    'tom_common.middleware.Raise403Middleware',
+    'tom_common.middleware.ExternalServiceMiddleware',
+    'tom_common.middleware.AuthStrategyMiddleware',
+]
+
+if os.getenv("USE_WHITENOISE","1") == "1":
+    MIDDLEWARE.insert(0, "whitenoise.middleware.WhiteNoiseMiddleware")
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+EOF
+
 
 echo
 echo "${bold}Running the one-time tom_setup management command...${normal}"

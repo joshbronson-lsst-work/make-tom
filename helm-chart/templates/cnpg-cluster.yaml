@@ -1,0 +1,31 @@
+{{- if not .Values.database.host }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.cnpg.clusterName | default (include "tom-demo.fullname" .) }}
+  labels:
+{{ include "tom-demo.labels" . | indent 4 }}
+spec:
+  instances: {{ .Values.cnpg.instances | default 1 }}
+  {{- with .Values.cnpg.imageName }}
+  imageName: {{ . | quote }}
+  {{- end }}
+  primaryUpdateStrategy: unsupervised
+  storage:
+    size: {{ .Values.cnpg.storage.size | default "8Gi" | quote }}
+  {{- if .Values.cnpg.superuser.password }}
+  superuserSecret:
+    name: {{ include "tom-demo.fullname" . }}-cnpg-superuser
+  {{- end }}
+  {{- if .Values.cnpg.bootstrap.initdb.enabled }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.database.name | default "app" | quote }}
+      owner: {{ .Values.database.user | default "app" | quote }}
+      {{- if .Values.database.existingSecret }}
+      secret:
+        name: {{ .Values.database.existingSecret | quote }}
+        key: {{ .Values.database.secretKeys.password | default "password" | quote }}
+      {{- end }}
+  {{- end }}
+{{- end }}

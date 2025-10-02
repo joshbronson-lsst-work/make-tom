@@ -51,3 +51,24 @@ Here's a way to generate a uniquely named TOM, which can be useful when you repe
 ./make-tom.sh name_of_your_tom_`date +'%Y%h%d_%0k%M'`
 ```
 This will create a uniquely named TOM Toolkit directory called, for example, `name_of_your_tom_2023Dec13_1751`.
+
+# Creating an Externally Facing TOM
+Creating an externally-facing TOM can be done in a few different
+ways. The basic ingredents include the following:
+* a domain name and control over DNS entries for that domain
+* a platform on which you can spin up a Kubernetes cluster and a
+  static IP address.
+
+There are many ways to gather these ingredients, and users should
+decide for themselves how to gather them. However, there are
+instructions [here](deployment.md) to deploy an external TOM if you
+are willing to use the following kinds of ingredients:
+* a domain name and control over DNS entries for that domain:
+  Squarespace. (You can easily use your own DNS server, though, if you
+  have the ability to create DNS A records for hosts for which you
+  have matching TLS keys at your organization.)
+* a platform on which you can spin up a Kubernetes cluster and a
+  static IP address: Google Compute Platform
+
+This isn't an endorsement of these particular tools, and many other
+fine alternatives exist for each of them.
