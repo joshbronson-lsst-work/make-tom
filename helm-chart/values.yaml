@@ -1,4 +1,4 @@
-# Default values for tom-demo.
+# Default values for tom-deploy.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -10,7 +10,7 @@ gunicornTimeout: 300
 replicaCount: 1
 
 image:
-  repository: "docker.lco.global/tom-demo"
+  repository: "docker.lco.global/tom-deploy"
   tag: stable
   pullPolicy: IfNotPresent
 
@@ -119,18 +119,7 @@ database:
     name: dbname
     password: password
 
-# One-time/controlled data import into Postgres via pg_restore. Disabled by default.
-jobs:
-  import:
-    enabled: false
-    # If true, run only on post-install. If false, run on post-install and post-upgrade.
-    onlyOnInstall: true
-    # URL to the pg_dump custom-format file (e.g., gs://bucket/path/dump.pg or https://...).
-    dumpUrl: ""
-    # Image providing pg_restore (e.g., postgres:16 or bitnami/postgresql:16)
-    postgresImage: "postgres:16"
-    # Image providing curl/wget to fetch the dump
-    fetchImage: "curlimages/curl:8.11.1"
+ 
 
 # CloudNativePG Cluster resource and uses its read/write service as DB_HOST.
 cnpg:
@@ -183,6 +172,10 @@ postgresql:
         memory: 512Mi
 
 secretKey: "changeme"
+
+# Google Cloud Storage bucket used for data products
+# This value will populate the GS_BUCKET_NAME environment variable in backend pods.
+gsBucketName: ""
 
 loadInitialData:
   enabled: false

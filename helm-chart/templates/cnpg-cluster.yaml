@@ -2,9 +2,9 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: {{ .Values.cnpg.clusterName | default (include "tom-demo.fullname" .) }}
+  name: {{ .Values.cnpg.clusterName | default (include "tom-deploy.fullname" .) }}
   labels:
-{{ include "tom-demo.labels" . | indent 4 }}
+{{ include "tom-deploy.labels" . | indent 4 }}
 spec:
   instances: {{ .Values.cnpg.instances | default 1 }}
   {{- with .Values.cnpg.imageName }}
@@ -15,7 +15,7 @@ spec:
     size: {{ .Values.cnpg.storage.size | default "8Gi" | quote }}
   {{- if .Values.cnpg.superuser.password }}
   superuserSecret:
-    name: {{ include "tom-demo.fullname" . }}-cnpg-superuser
+    name: {{ include "tom-deploy.fullname" . }}-cnpg-superuser
   {{- end }}
   {{- if .Values.cnpg.bootstrap.initdb.enabled }}
   bootstrap:

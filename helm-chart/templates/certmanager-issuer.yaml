@@ -8,10 +8,9 @@ spec:
     email: {{ .Values.certManager.email | quote }}
     server: {{ .Values.certManager.acmeServer | quote }}
     privateKeySecretRef:
-      name: {{ include "tom-demo.fullname" . }}-acme-account-key
+      name: {{ include "tom-deploy.fullname" . }}-acme-account-key
     solvers:
       - http01:
           ingress:
             class: {{ .Values.certManager.http01.ingressClass | quote }}
 {{- end }}
-

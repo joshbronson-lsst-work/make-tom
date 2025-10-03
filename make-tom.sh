@@ -98,6 +98,8 @@ echo
 echo "${bold}Creating requirements.txt...${normal}"
 cat > requirements.txt <<EOF
 tomtoolkit
+django-storages[google]
+google-cloud-storage
 gunicorn
 gevent
 greenlet
@@ -143,85 +145,50 @@ echo "${bold}Configuring the sqlite3 database for the base Django project...${no
 #        -i --in-place switch: BSD sed requires a suffix to be used. So, we avoid using
 #        that and simulate -i with a copy-to-tmp-and-remove-later method.
 #
+
 echo
-echo "${bold}Adding tom_setup to the settings.py INSTALLED_APPS list...${normal}"
-if command -v sed > /dev/null 2>&1; then
-    cp $TOM_NAME/settings.py $TOM_NAME/settings.py.tmp &&
-    sed -e "s/'django.contrib.staticfiles',/'django.contrib.staticfiles',\n    'tom_setup',/" \
-	-e 's/"django.contrib.staticfiles",/"django.contrib.staticfiles",\n    "tom_setup",/' <$TOM_NAME/settings.py.tmp >$TOM_NAME/settings.py &&
-    rm -r $TOM_NAME/settings.py.tmp
+echo "Making settings.py customizable with local_settings.py"
+nonce="TOM SETUP MODIFICATION COMPLETE"
+if ! grep "$nonce" "${TOM_NAME}/settings.py" 2>/dev/null >/dev/null; then
+    cat >> "${TOM_NAME}/settings.py" <<EOF
+
+# This must be here rather than local_settings.py in order for tom_setup to work.
+INSTALLED_APPS.append('tom_setup')
+
+try:
+    from local_settings import *
+except Exception as ex:
+    import traceback
+    traceback.print_exc(ex)
+
+if hasattr(locals(), 'update_settings'):
+    update_settings(globals())
+
+# ${nonce}
+EOF
+fi
+
+
+echo -n "Are you ready to continue? (Y/n)? [Y]: "
+read user_input
+
+# Set the default value to "N" if the input is empty
+user_input="${user_input:-Y}"
+# Convert the user input to uppercase
+user_input=$(echo "$user_input" | tr '[:lower:]' '[:upper:]')
+
+# Check the user's choice
+if [ "$user_input" = "Y" ]; then
+    echo "Continuing..."
 else
-    echo "sed not found. Please manually edit the INSTALLED_APPS list in your settings.py file and add 'tom_setup' at the end."
-    echo -n "Are you ready to continue? (Y/n)? [Y]: "
-    read user_input
-
-    # Set the default value to "N" if the input is empty
-    user_input="${user_input:-Y}"
-    # Convert the user input to uppercase
-    user_input=$(echo "$user_input" | tr '[:lower:]' '[:upper:]')
-
-    # Check the user's choice
-    if [ "$user_input" = "Y" ]; then
-        echo "Continuing..."
-    else
-        echo "Exiting."
-        exit 0
-    fi
+    echo "Exiting."
+    exit 0
 fi
 
 # 
 # 8. Create a TOM local settings file that will support Kubernetes.
 #
-cat >local_settings.py <<EOF
-import os
-
-# DEBUG is True by default to match behavior in settings.py
-DEBUG = os.getenv(
-    "DEBUG",
-    os.getenv("TOM_DEMO_DEBUG", "True")
-).lower() in ("1","true","yes","on")
-
-if "SECRET_KEY" in os.environ: 
-    SECRET_KEY = os.environ["SECRET_KEY"]
-
-ALLOWED_HOSTS = ['*']
-
-if "CSRF_TRUSTED_ORIGINS" in os.environ:
-    CSRF_TRUSTED_ORIGINS = [
-        u.strip() 
-        for u in os.environ["CSRF_TRUSTED_ORIGINS"].split(",") 
-        if u.strip()
-    ]
-
-if os.getenv("DB_HOST"):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql", 
-            "NAME": os.getenv("DB_NAME","postgres"), 
-            "USER": os.getenv("DB_USER","postgres"), 
-            "PASSWORD": os.getenv("DB_PASS",""), 
-            "HOST": os.getenv("DB_HOST"), "PORT": os.getenv("DB_PORT","5432")
-        }
-    }
-
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_htmx.middleware.HtmxMiddleware',
-    'tom_common.middleware.Raise403Middleware',
-    'tom_common.middleware.ExternalServiceMiddleware',
-    'tom_common.middleware.AuthStrategyMiddleware',
-]
-
-if os.getenv("USE_WHITENOISE","1") == "1":
-    MIDDLEWARE.insert(0, "whitenoise.middleware.WhiteNoiseMiddleware")
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-EOF
+cp ../templates/local_settings.py "local_settings.py"
 
 
 echo

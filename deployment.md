@@ -183,7 +183,7 @@ First, set the name of your TOM. This should be the same as the one
 you've created with make-tom.sh. This is required by both scripts run
 below.
 
-    export TOM_NAME=YOUR_TOM_NAME_HERE
+    export tom_name=YOUR_TOM_NAME_HERE
 
 The orchestration scripts, which reside in the scripts directory of
 this repository, can be run standalone, but they also include comments
@@ -228,7 +228,7 @@ inside the app pod to create a Django superuser. After this, use the
 web UI to sign in with the new account.
 
 	. scripts/common_config.sh
-    kubectl -n "$kubernetes_namespace" exec -it deploy/demo-tom-demo -c tom-demo -- sh -lc 'python manage.py createsuperuser'
+    kubectl -n "$kubernetes_namespace" exec -it deploy/demo-tom-deploy -c tom-deploy -- sh -lc 'python manage.py createsuperuser'
 
 You only need to perform this action once after the server is running.
 
@@ -269,7 +269,7 @@ record for this long.
 
 ## Connecting to Your Instance
 
-The last step in the process is ensuring that Transport Layer Security
+The next step in the process is ensuring that Transport Layer Security
 (TLS) is configured for the site and that you can connect to your
 instance. TLS is the protocol behind HTTPS (HTTP Secure); it encrypts
 browser/server traffic and authenticates your site with a
@@ -301,3 +301,26 @@ It will take a few minutes for the production TLS certificate to function,
 but at this point you should be able to navigate to the hostname you
 chose and log in with the administrative username and password you
 selected.
+
+## Transferring Data
+
+To transfer data from an existing TOM to the external TOM that you
+have just deployed, you can use
+[transfer_data.sh](scripts/transfer_data.sh) script.
+
+    export tom_name=YOUR_TOM_NAME_HERE
+    . scripts/common_config.sh
+    gcloud auth application-default login
+	bash scripts/transfer_data.sh
+
+WARNING: The script above will point all of your data on your *local*
+TOM to the cloud in preparation for transfer, so use it carefully!
+That script will also delete all data on the TOM you've just spun
+up.
+
+The script uses Django's builtin `dumpddata` and `loaddata` commands,
+which have the adavantage of being fairly portable. But these commands
+may not be fast enough for extremely large databases with, say,
+hundreds of thousands of entries. If better performance is needed
+during migration, [pgloader](https://pgloader.io) may be a good
+option.

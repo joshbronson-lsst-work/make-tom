@@ -25,7 +25,9 @@ fi
 
 # GCP and cluster configuration
 project_id="$(echo ${project_id:-tom-${tom_name}-project} | tr '[A-Z]' '[a-z]')"
+region=us-central1
 zone=${zone:-"us-central1-a"}
+bucket_name="$(echo ${bucket_name:-tom-${tom_name}-data-products} | tr '[A-Z]' '[a-z]')"
 
 proj_descr=${proj_descr:-"TOM Project"}
 cluster_name=${cluster_name:-tom-cluster}
@@ -51,3 +53,21 @@ tom_static_ip_name=${tom_static_ip_name:-tom-static-ip}
 letsencrypt_env=${letsencrypt_env:-staging}
 
 postgres_image_tag=17.6.0
+
+#--------------------------------------------------------------------------------
+# service account names and ids
+#--------------------------------------------------------------------------------
+
+function service_account_email() {
+    service_account_id="$1"
+    echo "${service_account_id}@${project_id}.iam.gserviceaccount.com"
+}
+
+# GDP service account for creating kubernetes nodes
+node_service_account_id=knodes
+node_service_account="$(service_account_email "$node_service_account_id")"
+
+# kubernetes service account for django to manage data products in a
+# Google Storage bucket
+data_product_service_account_id=tomdataprod
+data_product_service_account="$(service_account_email "$data_product_service_account_id")"

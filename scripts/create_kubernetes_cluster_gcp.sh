@@ -136,7 +136,13 @@ fi
 # Platform instance. You'll need to create these in order to push
 # containers to Google Compute Platforma and spin up Kubernetes
 # objects.
-gcloud services enable container.googleapis.com compute.googleapis.com iam.googleapis.com containerregistry.googleapis.com
+gcloud services enable \
+       container.googleapis.com \
+       compute.googleapis.com \
+       iam.googleapis.com \
+       containerregistry.googleapis.com \
+       iamcredentials.googleapis.com
+
 
 #--------------------------------------------------------------------------------
 # Create and configure a new service account specifically for
@@ -151,44 +157,131 @@ gcloud services enable container.googleapis.com compute.googleapis.com iam.googl
 # in your Kubenetes environments.
 # --------------------------------------------------------------------------------
 
-# First, create the service account itself idempotently: check if it
-# exists, and create it if not.
-node_service_account_id=knodes
-node_service_account="${node_service_account_id}@${project_id}.iam.gserviceaccount.com"
-if ! gcloud iam service-accounts describe "${node_service_account}" >/dev/null 2>/dev/null ; then
-    echo "Creating kubernetes node service account $node_service_account_id"
-    gcloud iam service-accounts create "$node_service_account_id"
-    sleep 10
+# Utility functions to create and wait for service accounts and assign roles
+
+function assign_roles() {
+    service_account_id="$1"; shift
+    service_account="$(service_account_email "$service_account_id")"
+    
+    for role in "$@"; do
+	echo ensuring role "$service_account has role $role"
+	gcloud projects add-iam-policy-binding "$project_id" \
+               --member="serviceAccount:${service_account}"  \
+	       --role="roles/${role}"
+    done
+}
+
+function create_service_account() {
+
+    # First, create the service account itself idempotently: check if it
+    # exists, and create it if not.
+    service_account_id="$1"; shift
+
+    service_account="$(service_account_email "$service_account_id")"
+    if ! gcloud iam service-accounts describe "${service_account}" >/dev/null 2>/dev/null ; then
+	echo "Creating kubernetes node service account $service_account_id"
+	gcloud iam service-accounts create "$service_account_id"
+	sleep 10
+    fi
+
+    # Wait for the service account to exist. Sometimes they take a few
+    # minutes to create.
+    echo "Waiting for creation of ${service_account}"
+    for try in {1..5}; do
+	# Check for the service account 
+	if gcloud iam service-accounts describe "${service_account}" ; then
+            echo Service account "${service_account} created."
+            break
+	else
+            echo "Problem. retrying in 60 seconds. This should not fail more than twice."
+            sleep 60
+	fi
+    done
+    
+    assign_roles "$service_account_id" "$@"
+}
+
+#--------------------------------------------------------------------------------
+# Create a service account to manage Kubernetes nodes.
+#--------------------------------------------------------------------------------
+
+# Ensure that the service account has roles sufficient for spinning up
+# Kubernetes nodes, which includes the need to read from an artifact
+# registry and pull docker images from it.
+
+create_service_account "$node_service_account_id" \
+		       artifactregistry.reader \
+		       logging.logWriter \
+		       monitoring.metricWriter
+
+#--------------------------------------------------------------------------------
+# Create a service account to manage TOM data products.
+#--------------------------------------------------------------------------------
+
+# Ensure that the role has the ability to manage Google Storage
+# buckets. The iam.serviceAccountTokenCreator role is also necessary
+# to generate "signed blobs," which are incorporated into URLs used to
+# access private Google Storage buckets. This allows TOM and Django to
+# generate URLs that allow their user to access data products in these
+# buckets without opening the buckets to the outside world.
+
+create_service_account "$data_product_service_account_id" \
+		       storage.objectAdmin \
+		       iam.serviceAccountTokenCreator
+
+
+#--------------------------------------------------------------------------------
+# Create and configure bucket to store data prdoucts on
+# --------------------------------------------------------------------------------
+
+# Create the bucket, if it doesn't exist.
+if gsutil ls "gs://${bucket_name}" > /dev/null 2>/dev/null; then
+    echo "OK. ${bucket_name} already exists. continuing."
+else
+    echo "Creating ${bucket_name}"
+    gsutil mb -p "$project_id" -l "$region" -b on "gs://${bucket_name}"
 fi
 
+sleep 5
 
-# Wait for the service account to exist. Sometimes they take a few
-# minutes to create.
-echo "Waiting for creation of ${node_service_account}"
-for try in {1..5}; do
-    # Check for the service account 
-    if gcloud iam service-accounts describe "${node_service_account}" ; then
-        # Found the service account. break.
-        break
-    else
-        echo "Problem. retrying in 60 seconds. This should not fail more than one or two times."
-        sleep 60
-    fi
-done
+# Grant the service account access to the bucket we'll use for data
+# products.
+gcloud storage buckets add-iam-policy-binding "gs://${bucket_name}" \
+  --member="serviceAccount:${data_product_service_account}" \
+  --role=roles/storage.objectAdmin
 
-# Next, ensure that the service account has roles sufficient for
-# spinning up Kubernetes nodes, which includes the need to read from
-# an artifact registry and pull docker images from it.
-for role in artifactregistry.reader logging.logWriter monitoring.metricWriter; do 
-    echo ensuring role "$role"
-    gcloud projects add-iam-policy-binding "$project_id" \
-           --member="serviceAccount:${node_service_account}" --role="roles/${role}"
-done
+# Configure the bucket to allow requests from Javascript from within
+# Django. This allows the JS9 viewer to work in Django.
+cors_conf="$(mktemp)"
+cat >"$cors_conf" <<EOF
+[
+  {
+    "origin": [
+      "https://${tom_hostname}",
+      "http://localhost:8000",
+      "http://127.0.0.1:8000"
+    ],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Accept-Ranges",
+      "Content-Range",
+      "ETag",
+      "Last-Modified",
+      "x-goog-hash"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
+EOF
 
-# Finally, create a Kubernetes cluster with a configurable nubmer of
-# nodes. A single node can run multiple Kubernetes pods. Many rules
-# determine which pods are assinged to which nodes, including resource
-# limits and explicit selectors.
+gcloud storage buckets update "gs://${bucket_name}" --cors-file="$cors_conf"
+
+# Create a Kubernetes cluster with a configurable nubmer of nodes. A
+# single node can run multiple Kubernetes pods. Many rules determine
+# which pods are assinged to which nodes, including resource limits
+# and explicit selectors.
 if ! gcloud container clusters describe --zone "$zone" "$cluster_name" >/dev/null 2>/dev/null; then
     echo "OK. cluster ${cluster_name} does not exist. creating it."
     gcloud container clusters create "$cluster_name"    \
@@ -196,8 +289,21 @@ if ! gcloud container clusters describe --zone "$zone" "$cluster_name" >/dev/nul
            --num-nodes="$nodes"                         \
            --service-account="${node_service_account}"  \
            --machine-type="$machine"                    \
+           --workload-metadata=GKE_METADATA             \
+           --workload-pool="${project_id}.svc.id.goog"  \
            --enable-ip-alias
 fi
+
+# Now, as a final step, we need to allow a to-be-created Kubernetes
+# service account to impersonate the data product service account we
+# created above. This is because the service account used by the
+# Django pod responsible for serving up access to the Google Storage
+# bucket will actually have a Kubernetes key, not a Google Storage
+# key.
+gcloud iam service-accounts add-iam-policy-binding "${data_product_service_account_id}@${project_id}.iam.gserviceaccount.com" \
+    --role roles/iam.workloadIdentityUser \
+    --member "serviceAccount:${project_id}.svc.id.goog[${kubernetes_namespace}/${data_product_service_account_id}]"
+
 
 # Finally, we will install the gke-gcloud-auth-plugin, and then use
 # its get-credentials command to configure the kubernetes kubectl

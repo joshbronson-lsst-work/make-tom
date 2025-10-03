@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "tom-demo.fullname" . }}-ingester
+  name: {{ include "tom-deploy.fullname" . }}-ingester
   labels:
-{{ include "tom-demo.labels" . | indent 4 }}
+{{ include "tom-deploy.labels" . | indent 4 }}
     app.kubernetes.io/component: "ingester"
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "tom-demo.name" . }}
+      app.kubernetes.io/name: {{ include "tom-deploy.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: "ingester"
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "tom-demo.name" . }}
+        app.kubernetes.io/name: {{ include "tom-deploy.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: "ingester"
     spec:
@@ -31,7 +31,7 @@ spec:
               until pg_isready \
                   --username={{ .Values.database.user | default "app" | quote }} \
                   --dbname={{ .Values.database.name | default "app" | quote }} \
-                  --host={{ include "tom-demo.dbhost" . | quote }} \
+                  --host={{ include "tom-deploy.dbhost" . | quote }} \
                   --port={{ .Values.database.port | default "5432" | quote }};
                 do echo waiting for database;
                 sleep 2;
@@ -52,7 +52,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      serviceAccountName: {{ template "tom-demo.serviceAccountName" . }}
+      serviceAccountName: {{ template "tom-deploy.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -68,11 +68,11 @@ spec:
 #            - manage.py
 #            - readstreams
           env:
-            {{ include "tom-demo.extraEnv" . | nindent 12 }}
-            {{ include "tom-demo.backendEnv" . | nindent 12 }}
+            {{ include "tom-deploy.extraEnv" . | nindent 12 }}
+            {{ include "tom-deploy.backendEnv" . | nindent 12 }}
           envFrom:
             - secretRef:
-                name: tom-demo-secrets
+                name: tom-deploy-secrets
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -82,7 +82,7 @@ spec:
       volumes:
         - name: app-configuration
           configMap:
-            name: {{ include "tom-demo.fullname" . }}
+            name: {{ include "tom-deploy.fullname" . }}
         - name: tmp-ingester
           emptyDir:
             medium: Memory

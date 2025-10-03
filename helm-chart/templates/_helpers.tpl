@@ -2,7 +2,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "tom-demo.name" -}}
+{{- define "tom-deploy.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -11,7 +11,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "tom-demo.fullname" -}}
+{{- define "tom-deploy.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -27,14 +27,14 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "tom-demo.chart" -}}
+{{- define "tom-deploy.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
-Generate the tom-demo main deploy url
+Generate the tom-deploy main deploy url
 */}}
-{{- define "tom-demo.mainDeployUrl" -}}
+{{- define "tom-deploy.mainDeployUrl" -}}
 {{- $ingressClass := index .Values.ingress.annotations "kubernetes.io/ingress.class" | quote -}}
 {{- $hosts := first .Values.ingress.hosts -}}
 {{- $host := pluck "host" $hosts | first -}}
@@ -48,9 +48,9 @@ Generate the tom-demo main deploy url
 {{/*
 Common labels
 */}}
-{{- define "tom-demo.labels" -}}
-app.kubernetes.io/name: {{ include "tom-demo.name" . }}
-helm.sh/chart: {{ include "tom-demo.chart" . }}
+{{- define "tom-deploy.labels" -}}
+app.kubernetes.io/name: {{ include "tom-deploy.name" . }}
+helm.sh/chart: {{ include "tom-deploy.chart" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
@@ -61,9 +61,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "tom-demo.serviceAccountName" -}}
+{{- define "tom-deploy.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create -}}
-    {{ default (include "tom-demo.fullname" .) .Values.serviceAccount.name }}
+    {{ default (include "tom-deploy.fullname" .) .Values.serviceAccount.name }}
 {{- else -}}
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
@@ -72,11 +72,11 @@ Create the name of the service account to use
 {{/*
 Generate the postgres DB hostname
 */}}
-{{- define "tom-demo.dbhost" -}}
+{{- define "tom-deploy.dbhost" -}}
 {{- if .Values.database.host -}}
 {{- .Values.database.host | quote | trimAll '"' -}}
 {{- else -}}
-{{- $cn := default (include "tom-demo.fullname" .) .Values.cnpg.clusterName -}}
+{{- $cn := default (include "tom-deploy.fullname" .) .Values.cnpg.clusterName -}}
 {{- printf "%s-rw" $cn -}}
 {{- end -}}
 {{- end -}}
@@ -86,7 +86,7 @@ Create the environment variables for configuration of this project. They are
 repeated in a bunch of places, so to keep from repeating ourselves, we'll
 build it here and use it everywhere.
 */}}
-{{- define "tom-demo.extraEnv" -}}
+{{- define "tom-deploy.extraEnv" -}}
 - name: HOME
   value: "/tmp"
 - name: TOM_DEMO_DEBUG
@@ -97,14 +97,16 @@ build it here and use it everywhere.
   value: {{ join "," .Values.csrf_trusted_origins | quote }}
 - name: ALLOWED_HOSTS
   value: {{ join "," .Values.allowedHosts | quote }}
+- name: GS_BUCKET_NAME
+  value: {{ .Values.gsBucketName | default "" | quote }}
 {{- end }}
 
 {{/*
 Define shared database environment variables
 */}}
-{{- define "tom-demo.backendEnv" -}}
+{{- define "tom-deploy.backendEnv" -}}
 - name: DB_HOST
-  value: {{ include "tom-demo.dbhost" . | quote }}
+  value: {{ include "tom-deploy.dbhost" . | quote }}
 {{- if .Values.database.existingSecret }}
 - name: DB_NAME
   valueFrom:

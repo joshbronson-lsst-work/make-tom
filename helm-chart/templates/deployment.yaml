@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "tom-demo.fullname" . }}
+  name: {{ include "tom-deploy.fullname" . }}
   labels:
-{{ include "tom-demo.labels" . | indent 4 }}
+{{ include "tom-deploy.labels" . | indent 4 }}
     app.kubernetes.io/component: "backend"
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "tom-demo.name" . }}
+      app.kubernetes.io/name: {{ include "tom-deploy.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: "backend"
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "tom-demo.name" . }}
+        app.kubernetes.io/name: {{ include "tom-deploy.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: "backend"
     spec:
@@ -31,7 +31,7 @@ spec:
               until pg_isready \
                   --username={{ .Values.database.user | default "app" | quote }} \
                   --dbname={{ .Values.database.name | default "app" | quote }} \
-                  --host={{ include "tom-demo.dbhost" . | quote }} \
+                  --host={{ include "tom-deploy.dbhost" . | quote }} \
                   --port={{ .Values.database.port | default "5432" | quote }};
                 do echo waiting for database;
                 sleep 2;
@@ -52,13 +52,19 @@ spec:
         - name: apply-db-migrations
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # Run core app migrations first to avoid cross-app ordering issues,
+          # then apply the rest.
           command:
-            - python
-            - manage.py
-            - migrate
-            - --no-input
+            - sh
+            - -lc
+            - |
+              set -e
+              for app in contenttypes auth sites django_comments django_tasks_database guardian; do
+                python manage.py migrate "$app" --no-input
+              done
+              python manage.py migrate --no-input
           env:
-            {{- include "tom-demo.backendEnv" . | nindent 12 }}
+            {{- include "tom-deploy.backendEnv" . | nindent 12 }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
@@ -82,7 +88,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
-      serviceAccountName: {{ template "tom-demo.serviceAccountName" . }}
+      serviceAccountName: {{ template "tom-deploy.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
 
@@ -102,11 +108,11 @@ spec:
             - --error-logfile=-
             - {{ required "Set .Values.wsgiModule (e.g., 'TOM_NAME_HERE.wsgi')" .Values.wsgiModule }}
           env:
-            {{ include "tom-demo.extraEnv" . | nindent 12 }}
-            {{ include "tom-demo.backendEnv" . | nindent 12 }}
+            {{ include "tom-deploy.extraEnv" . | nindent 12 }}
+            {{ include "tom-deploy.backendEnv" . | nindent 12 }}
           envFrom:
             - secretRef:
-                name: tom-demo-secrets
+                name: tom-deploy-secrets
           ports:
             - name: http
               containerPort: 8080
@@ -125,7 +131,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: app-configuration
-              mountPath: /tom-demo/static
+              mountPath: /tom-deploy/static
               readOnly: false
             - name: tmp
               mountPath: /tmp
@@ -133,7 +139,7 @@ spec:
       volumes:
         - name: app-configuration
           configMap:
-            name: {{ include "tom-demo.fullname" . }}
+            name: {{ include "tom-deploy.fullname" . }}
         - name: tmp
           emptyDir:
             medium: Memory

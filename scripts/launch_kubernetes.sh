@@ -131,11 +131,36 @@ if ! gcloud artifacts repositories describe --location "$location" "$image_repo"
            --description "TOM images"
 fi
 
-# Now idempotently build and push the image.
+chart_dir="$(dirname "${proj_dir}")"
+tom_dir="${chart_dir}/${tom_name}"
+if [ -d "$tom_dir" ]; then
+  fingerprint=$( (
+    cd "$tom_dir" && \
+    find . -type f \
+      ! -path './env/*' \
+      ! -path './.venv/*' \
+      ! -path './__pycache__/*' \
+      ! -name '*.pyc' \
+      ! -path './media/*' \
+      ! -path './staticfiles/*' \
+      ! -path './static/*' \
+      ! -path './tmp/*' \
+      ! -name 'db.sqlite3' \
+      -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
+  ) )
+  if [ ! -z "${fingerprint:-}" ]; then
+    computed_tag="tom-$(echo "${tom_name}" | tr '[A-Z]' '[a-z]')-$(echo "$fingerprint" | cut -c1-12)"
+    image_tag="$computed_tag"
+    image="${image_full_name}:${image_tag}"
+    echo "Using content-hash image tag: ${image_tag}"
+  fi
+fi
+
+# Now idempotently build and push the image for the resolved tag.
 if docker manifest inspect "$image" >/dev/null 2>/dev/null; then
-    echo "OK. image exists. continuing."
+    echo "OK. image ${image} already exists. Skipping build."
 else
-    echo "Building docker image"
+    echo "Building docker image ${image}"
     docker build --build-arg TOM_NAME="$tom_name" -t "$image" .
     docker push "$image"
 fi
@@ -156,13 +181,11 @@ fi
 static_external_ip=$(gcloud compute addresses describe "$tom_static_ip_name" --region "$location" --format='get(address)')
 echo got static external IP "$static_external_ip"
 
-chart_dir="$(dirname "${proj_dir}")"
-
 #--------------------------------------------------------------------------------
 # Now wire up the actual ingress using the ingress-nginx from the
 # ingress-nginx repository we installed above. The objects created by
 # ingress-nginx can be shared among multiple Kubernetes objects. The
-# nginx instance created in the tom-demo chart will use this resource
+# nginx instance created in the tom-deploy chart will use this resource
 # in order to create a TLS interface to the service.
 # --------------------------------------------------------------------------------
 
@@ -213,9 +236,11 @@ fi
 # Turn echo back on
 set -x
 
-# Create a placeholder
-if ! kubectl -n "$kubernetes_namespace" get secret tom-demo-secrets 2>/dev/null >/dev/null; then
-    kubectl -n "$kubernetes_namespace" create secret generic tom-demo-secrets --from-literal=placeholder=1
+# Ensure application secret with optional GCP credentials exists.
+# If GOOGLE_APPLICATION_CREDENTIALS_JSON is not present in the secret and gcloud is available,
+# attempt to create a new service account key and store it in the secret.
+if ! kubectl -n "$kubernetes_namespace" get secret tom-deploy-secrets 2>/dev/null >/dev/null; then
+    kubectl -n "$kubernetes_namespace" create secret generic tom-deploy-secrets --from-literal=placeholder=1
 fi
 
 if [[ "$letsencrypt_env" == staging ]]; then
@@ -227,6 +252,28 @@ elif [[ "$letsencrypt_env" == prod ]]; then
 else 
     echo unrecognized letsyncrypt environment: "$letsencrypt_env"
 fi
+
+
+#--------------------------------------------------------------------------------
+# Set up access to the Google storage bucket from the django pod. This
+# will allow the Django pod to manage data product binaries.a
+# --------------------------------------------------------------------------------
+
+# Create a Kubernetes service account for the django server pod.
+if kubectl -n "$kubernetes_namespace" get serviceaccount "$data_product_service_account_id" >/dev/null 2>/dev/null; then
+    echo OK. Service account "$data_product_service_account_id" already exists. continuing.
+else
+    kubectl create -n "$kubernetes_namespace" serviceaccount "$data_product_service_account_id"
+fi
+
+# As a final step, annotate the data service account to tell GCP that
+# this service account is allowed to impersonate the GCP service
+# account we created for the purpose of viewing private Google Storage
+# buckets.
+
+kubectl annotate serviceaccount "$data_product_service_account_id" \
+    --namespace "$kubernetes_namespace" \
+    iam.gke.io/gcp-service-account="${data_product_service_account_id}@${project_id}.iam.gserviceaccount.com"
 
 # Install the TOM helm chart!
 helm upgrade --install tom "${chart_dir}/helm-chart"                                     \
@@ -245,6 +292,9 @@ helm upgrade --install tom "${chart_dir}/helm-chart"                            
      --set csrf_trusted_origins[0]="https://${tom_hostname}"                             \
      --set database.existingSecret=${database_secret_name:-tom-app-db}                   \
      --set allowedHosts[0]="$tom_hostname"                                               \
+     --set gsBucketName="$bucket_name"                                                   \
+     --set serviceAccount.name="$data_product_service_account_id"                        \
+     --set serviceAccount.create=false                                                   \
      --set-string 'ingress.annotations.nginx\.ingress\.kubernetes\.io/ssl-redirect=true' \
      --set certManager.enabled=true                                                      \
      --set certManager.issuerKind=ClusterIssuer                                          \
