@@ -185,3 +185,51 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+cronjobs:
+
+  - name: clearsesssions
+
+    # This standard crontab schedule string controls how frequently
+    # this job is run.
+    # Examples:
+    # - "*/15 * * * *"  → every 15 minutes
+    # - "0 3 * * *"     → every day at 03:00 (default)
+    # - "0 0 * * 0"     → every Sunday at midnight
+    schedule: "0 3 * * *"
+  
+    # Command to run in the container. Defaults to a safe Django maintenance task.
+    # If you prefer `args` style, you can move parts to `args` below.
+    # Examples:
+    # - Run a custom manage.py command: ["python","manage.py","mytask","--limit","100"]
+    # - Run a shell script baked in your image: ["/bin/sh","-lc","/app/scripts/do-thing.sh"]
+    command:
+      - python
+      - manage.py
+      - clearsessions
+  
+    # Temporarily pause the schedule without deleting the CronJob
+    suspend: false
+
+  - name: sleep test
+
+    # This standard crontab schedule string controls how frequently
+    # this job is run.
+    # Examples:
+    # - "*/15 * * * *"  → every 15 minutes
+    # - "0 3 * * *"     → every day at 03:00 (default)
+    # - "0 0 * * 0"     → every Sunday at midnight
+    schedule: "0 3 * * *"
+  
+    # Command to run in the container. Defaults to a safe Django maintenance task.
+    # If you prefer `args` style, you can move parts to `args` below.
+    # Examples:
+    # - Run a custom manage.py command: ["python","manage.py","mytask","--limit","100"]
+    # - Run a shell script baked in your image: ["/bin/sh","-lc","/app/scripts/do-thing.sh"]
+    command:
+      - sleep
+      - 60
+  
+    # Temporarily pause the schedule without deleting the CronJob
+    suspend: false
+    
