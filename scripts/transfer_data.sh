@@ -60,7 +60,7 @@ function tom_dump() {
 
 function tom_load() {
     kubectl -n "$kubernetes_namespace" exec -i deploy/"${backend_name}" -- \
-	    python /app/manage.py loaddata --format json - 
+            python /app/manage.py loaddata --format json - 
 }
 
 #--------------------------------------------------------------------------------
@@ -74,43 +74,43 @@ echo "--------------------------------------------------------------------------
 set -x >/dev/null
 
 kubectl -n "$kubernetes_namespace" exec -it deploy/"${backend_name}" -- \
-	python /app/manage.py flush
+        python /app/manage.py flush
 
 # First, create users and authorizations. These models are often used
 # by other models, and trying to load everything all at once when
 # loading to a completely new database can result in foreign key
 # errors:
 #
-#   - contenttypes	:: model registry mapping app labels to model names
-#   - auth		:: authorizations used to interact with models
-#   - auth		:: named set of permissions
-#   - auth		:: users, including login information, etc.
-#   - guardian		:: object-level permissions for individual records
-#   - guardian		:: groups of object-level permissions
+#   - contenttypes      :: model registry mapping app labels to model names
+#   - auth              :: authorizations used to interact with models
+#   - auth              :: named set of permissions
+#   - auth              :: users, including login information, etc.
+#   - guardian          :: object-level permissions for individual records
+#   - guardian          :: groups of object-level permissions
 
-tom_dump contenttypes auth.permission	\
-	 auth.group			\
-	 auth.user			\
-	 guardian.userobjectpermission	\
-	 guardian.groupobjectpermission | tom_load
+tom_dump contenttypes auth.permission   \
+         auth.group                     \
+         auth.user                      \
+         guardian.userobjectpermission  \
+         guardian.groupobjectpermission | tom_load
 
 
 # Now dump the objects that are dependent on these.If this doesn't
 # load, consider adding `admin.logentry` to the list of exclusions
 # below.
 #
-#   - admin.logentry		:: records changes made by administrators. can be breaky.
-#   - sessions			:: login sessions not needed. re-login.
-#   - authtoken			:: auth tokens not needed. re-auth.
-#   - contenttypes		:: already loaded
-#   - auth			:: already loaded
-#   - tom_common.usersession	:: related to user sessions. not needed.
-#   - guardian			:: relevant objects already loaded
+#   - admin.logentry            :: records changes made by administrators. can be breaky.
+#   - sessions                  :: login sessions not needed. re-login.
+#   - authtoken                 :: auth tokens not needed. re-auth.
+#   - contenttypes              :: already loaded
+#   - auth                      :: already loaded
+#   - tom_common.usersession    :: related to user sessions. not needed.
+#   - guardian                  :: relevant objects already loaded
 
-tom_dump				\
-  --exclude sessions			\
-  --exclude authtoken			\
-  --exclude contenttypes		\
-  --exclude auth			\
-  --exclude tom_common.usersession	\
+tom_dump                                \
+  --exclude sessions                    \
+  --exclude authtoken                   \
+  --exclude contenttypes                \
+  --exclude auth                        \
+  --exclude tom_common.usersession      \
   --exclude guardian | tom_load         \    
