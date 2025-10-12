@@ -184,6 +184,7 @@ you've created with make-tom.sh. This is required by both scripts run
 below.
 
     export tom_name=YOUR_TOM_NAME_HERE
+    export tom_hostname=YOUR_SITE_HOSTNAME_HERE
 
 The orchestration scripts, which reside in the scripts directory of
 this repository, can be run standalone, but they also include comments
@@ -208,7 +209,6 @@ the script once.
 
 Once that is complete, deploy the Kubernetes cluster:
 
-    export tom_hostname=YOUR_SITE_HOSTNAME_HERE
     export certmanager_email=YOUR_EMAIL_HERE 
     bash scripts/launch_kubernetes.sh
 
