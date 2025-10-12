@@ -24,6 +24,7 @@ spec:
           serviceAccountName: {{ template "tom-deploy.serviceAccountName" $root }}
           securityContext:
             {{- toYaml $root.Values.podSecurityContext | nindent 12 }}
+          restartPolicy: Never
           containers:
             - name: {{ $root.Chart.Name }}-cron
 
@@ -86,4 +87,5 @@ spec:
           tolerations:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+---
 {{- end }}

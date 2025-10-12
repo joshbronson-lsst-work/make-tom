@@ -211,7 +211,7 @@ cronjobs:
     # Temporarily pause the schedule without deleting the CronJob
     suspend: false
 
-  - name: sleep test
+  - name: sleep-test
 
     # This standard crontab schedule string controls how frequently
     # this job is run.
@@ -219,7 +219,7 @@ cronjobs:
     # - "*/15 * * * *"  → every 15 minutes
     # - "0 3 * * *"     → every day at 03:00 (default)
     # - "0 0 * * 0"     → every Sunday at midnight
-    schedule: "0 3 * * *"
+    schedule: "*/5 * * * *"
   
     # Command to run in the container. Defaults to a safe Django maintenance task.
     # If you prefer `args` style, you can move parts to `args` below.
@@ -227,8 +227,9 @@ cronjobs:
     # - Run a custom manage.py command: ["python","manage.py","mytask","--limit","100"]
     # - Run a shell script baked in your image: ["/bin/sh","-lc","/app/scripts/do-thing.sh"]
     command:
-      - sleep
-      - 60
+      - bash
+      - "-c"
+      - "echo test 123 ; sleep 120"
   
     # Temporarily pause the schedule without deleting the CronJob
     suspend: false

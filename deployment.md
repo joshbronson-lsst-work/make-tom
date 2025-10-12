@@ -324,3 +324,23 @@ may not be fast enough for extremely large databases with, say,
 hundreds of thousands of entries. If better performance is needed
 during migration, [pgloader](https://pgloader.io) may be a good
 option.
+
+## Code Modifications
+
+After making modifications to the code or your local TOM, you should
+be able to push your changes up to your Kubernetes cluster by
+rerunning the launch\_kubernetes.sh command as described above. Note
+that this will not push new data from your local TOM to the remote
+cluster. Currently, only the transfer\_data.sh script, as described
+above, will do that. And it will delete all of the data on your remote
+server first.
+
+## Running Cron Jobs
+
+If you would like to create jobs that run on a pod very similar to the
+Django server pod, follow the pattern laid out in
+[values.yaml](helm-chart/values.yaml). After configuring whatever job
+you would like, rerun the launch_kubernetes.sh script as described
+above and your jobs will be created. By default, two jobs are created:
+one to clear user sessions at 3 AM and another small test job that
+runs every 5 minutes.
