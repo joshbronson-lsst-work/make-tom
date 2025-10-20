@@ -283,7 +283,7 @@ helm upgrade --install tom "${chart_dir}/helm-chart"                            
      --set djangoDebug="TRUE"                                                            \
      --set useWhitenoise="1"                                                             \
      --set wsgiModule="${tom_name}.wsgi"                                                 \
-     --set nameOverride="$(echo ${tom_name} | tr '[A-Z]' '[a-z]')"                       \
+     --set nameOverride="$tom_name_lowercase"                                            \
      --set image.repository="$image_full_name"                                           \
      --set image.tag="$image_tag"                                                        \
      --set ingress.tls[0].secretName=tom-tls                                             \

@@ -21,7 +21,7 @@ if [ -z "$tom_name" ]; then
   echo "ERROR: tom_name is required. Set it in the environment or scripts/common_config.sh" >&2
   exit 1
 fi
-
+tom_name_lowercase="$(echo ${tom_name} | tr '[A-Z]' '[a-z]')"
 
 # GCP and cluster configuration
 project_id="$(echo ${project_id:-tom-${tom_name}-project} | tr '[A-Z]' '[a-z]')"

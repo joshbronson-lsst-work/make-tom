@@ -228,7 +228,7 @@ inside the app pod to create a Django superuser. After this, use the
 web UI to sign in with the new account.
 
 	. scripts/common_config.sh
-    kubectl -n "$kubernetes_namespace" exec -it deploy/demo-tom-deploy -c tom-deploy -- sh -lc 'python manage.py createsuperuser'
+    kubectl -n "$kubernetes_namespace" exec -it "deploy/tom-${tom_name_lowercase}" -- python manage.py createsuperuser
 
 You only need to perform this action once after the server is running.
 
