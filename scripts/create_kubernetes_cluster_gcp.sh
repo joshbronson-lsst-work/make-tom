@@ -116,7 +116,7 @@ if [[ -z "$billing_account" ]]; then
 
     # Get all of the billing accounts and count how many there are.
     billing_accounts="$(gcloud billing accounts list --format="value(ACCOUNT_ID)")"
-    num_accounts="$(echo "$billing_accounts" | wc -w)"
+    num_accounts="$(echo "$billing_accounts" | wc -w | awk '{$1=$1};1')"
 
     if [[ $num_accounts == 0 ]]; then
         echo A billing account must be set up first on Google Compute Engine.
