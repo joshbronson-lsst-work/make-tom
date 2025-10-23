@@ -17,3 +17,5 @@ ENV/
 .env
 
 *.tgz
+
+__pycache__

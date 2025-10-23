@@ -72,7 +72,12 @@ securityContext:
 
 service:
   type: ClusterIP
-  port: 80
+  annotations: {}
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
 
 ingress:
   enabled: false
@@ -136,6 +141,10 @@ cnpg:
   instances: 1
   storage:
     size: 8Gi
+    # Optional: explicitly select a StorageClass for CNPG PVCs.
+    # If empty, Kubernetes will use the cluster's default StorageClass (if any).
+    # Set this on clusters without a default SC, e.g., "gp2" or "gp3" on EKS.
+    storageClass: ""
   # Database bootstrap configuration
   bootstrap:
     initdb:

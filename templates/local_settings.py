@@ -54,15 +54,36 @@ MIDDLEWARE = [
 ]
 
 
-if os.getenv("USE_WHITENOISE","1") == "1":
+storages_cfg = {}
+
+if os.getenv("USE_WHITENOISE", "1") == "1":
     MIDDLEWARE.insert(0, "whitenoise.middleware.WhiteNoiseMiddleware")
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    storages_cfg["staticfiles"] = {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    }
 
 
 GS_BUCKET_NAME = os.environ.get("GS_BUCKET_NAME")
 if GS_BUCKET_NAME:
-    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    storages_cfg["default"] = {
+        "BACKEND": "storages.backends.gcloud.GoogleCloudStorage",
+        "OPTIONS": {
+            "bucket_name": GS_BUCKET_NAME,
+        }
+    }
     GS_IAM_SIGN_BLOB = True
+
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
+if S3_BUCKET_NAME:
+    storages_cfg["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": S3_BUCKET_NAME,
+            # Without this we will have problems with CORS due to redirects
+            "endpoint_url": f"https://s3.{os.environ['S3_REGION_NAME']}.amazonaws.com",
+            "addressing_style": "virtual",
+        }
+    }
 
 GS_DEFAULT_ACL = None
 
@@ -75,3 +96,6 @@ def update_settings(settings):
     if 'storages' not in settings['INSTALLED_APPS']:
         settings['INSTALLED_APPS'].append('storages')
 
+    # Only set STORAGES if we actually configured any backends above
+    if storages_cfg:
+        settings['STORAGES'] = storages_cfg

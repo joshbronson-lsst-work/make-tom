@@ -1,39 +1,9 @@
 # Save the directory containing this script to the $proj_dir variable.
 pushd "$(dirname "${BASH_SOURCE[0]}")"; proj_dir=`pwd`; popd
 
+set -euxo pipefail
 
-#--------------------------------------------------------------------------------
-# This script is designed to be run over and over without causing harm
-# to a system. Successive runs should push the system toward a good
-# state and preserve that good state, whether or not the script
-# fails. This design philosophy is common in devops, and scripts that
-# adhere to it are called idempotent. 
-#
-# Idempotent scripts, in theory, should be easier to debug and
-# develop, because it isn't necessary to start from a completely fresh
-# state each time they are run. If you decide to run this script
-# end-to-end and run into a problem, read the comments close to where
-# the problem occurred. Those comments may help lead you to a
-# solution. After solving one issue, you should be able to simply
-# rerun the script from the beginning.
-#
-# To that end, these options enable some useful output and cause the
-# script to fail more quickly in the event of an error. This prevents
-# the script from continuing too far, allowing the user to debug the
-# problem and rerun the script from the beginning.
-# --------------------------------------------------------------------------------
-
-set -o pipefail # A command composed of piped commands is considered
-                # to have failed if any of its piped commands have
-                # failed.
-
-set -e          # Exit immediately if a command fails.
-
-set -u          # When interpolating (substituting into a string) a variable,
-                # if that variable is unset, the command performing the
-                # substitution is considered to have failed.
-
-set -x          # Print each command as it is being executed.
+tom_dir="$(dirname "$(dirname $proj_dir)")"
 
 #--------------------------------------------------------------------------------
 # configuration
@@ -48,14 +18,20 @@ backend_name=tom-"$(echo ${tom_name} | tr '[A-Z]' '[a-z]')"
 # Migrate Data Products
 #--------------------------------------------------------------------------------
 
-python "${proj_dir}/transfer_data_products.py" "$tom_name" "$bucket_name"
+if [[ "$platform" == "EKS" ]]; then
+    backend=s3
+else
+    backend=gcs
+fi
+
+python "${proj_dir}/transfer_data_products.py" "$tom_name" "$bucket_name" "$backend"
 
 #--------------------------------------------------------------------------------
 # Define functions to interact with databases
 #--------------------------------------------------------------------------------
 
 function tom_dump() {
-    python "${tom_name}/manage.py" dumpdata "$@" --natural-primary --natural-foreign --indent 2 
+    python "manage.py" dumpdata "$@" --natural-primary --natural-foreign --indent 2
 }
 
 function tom_load() {
@@ -67,14 +43,27 @@ function tom_load() {
 # Migrate SQL data
 #--------------------------------------------------------------------------------
 
+pushd "$tom_dir"
+
 set +x >/dev/null
-echo "--------------------------------------------------------------------------------"
-echo " THIS SCRIPT WILL DELETE YOUR DATA ON YOUR TARGET TOM IF YOU SAY YES BELOW      "
-echo "--------------------------------------------------------------------------------"
+echo "================================================================================"
+echo " THIS SCRIPT WILL DELETE YOUR DATA ON YOUR REMOTE TOM IF YOU SAY YES BELOW      "
+echo "================================================================================"
 set -x >/dev/null
 
+read -r -p "Type YES to continue: " ans
+if [[ "$ans" == "YES" ]]; then
+    echo "OK. DELETING ALL DATA ON YOUR REMOTE TOM!"
+    sleep 5
+else
+    echo "Aborting"
+    exit 1
+fi
+
 kubectl -n "$kubernetes_namespace" exec -it deploy/"${backend_name}" -- \
-        python /app/manage.py flush
+        python /app/manage.py flush --no-input
+
+kubectl -n "$kubernetes_namespace" exec -it deploy/"$backend_name" -- python /app/manage.py shell -c "from tom_common.models import Profile; Profile.objects.all().delete()"
 
 # First, create users and authorizations. These models are often used
 # by other models, and trying to load everything all at once when
@@ -113,4 +102,7 @@ tom_dump                                \
   --exclude contenttypes                \
   --exclude auth                        \
   --exclude tom_common.usersession      \
+  --exclude tom_common.profile          \
   --exclude guardian | tom_load         \    
+
+popd

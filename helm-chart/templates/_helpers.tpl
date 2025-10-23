@@ -99,6 +99,10 @@ build it here and use it everywhere.
   value: {{ join "," .Values.allowedHosts | quote }}
 - name: GS_BUCKET_NAME
   value: {{ .Values.gsBucketName | default "" | quote }}
+- name: S3_BUCKET_NAME
+  value: {{ .Values.s3BucketName | default "" | quote }}
+- name: S3_REGION_NAME
+  value: {{ .Values.s3RegionName | default "" | quote }}
 {{- end }}
 
 {{/*

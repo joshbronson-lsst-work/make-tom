@@ -13,6 +13,9 @@ spec:
   primaryUpdateStrategy: unsupervised
   storage:
     size: {{ .Values.cnpg.storage.size | default "8Gi" | quote }}
+    {{- with .Values.cnpg.storage.storageClass }}
+    storageClass: {{ . | quote }}
+    {{- end }}
   {{- if .Values.cnpg.superuser.password }}
   superuserSecret:
     name: {{ include "tom-deploy.fullname" . }}-cnpg-superuser
@@ -25,7 +28,9 @@ spec:
       {{- if .Values.database.existingSecret }}
       secret:
         name: {{ .Values.database.existingSecret | quote }}
-        key: {{ .Values.database.secretKeys.password | default "password" | quote }}
+      {{- else if .Values.database.password }}
+      secret:
+        name: {{ include "tom-deploy.fullname" . }}-cnpg-app
       {{- end }}
   {{- end }}
 {{- end }}

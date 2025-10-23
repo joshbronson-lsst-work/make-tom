@@ -44,15 +44,15 @@ if __name__ == '__main__':
     fits_files = [
         os.path.abspath(f) for f in args.fits_files
     ]
+    # assume that we are liviing within a TOM
     tom_dir = os.path.abspath(
-        os.path.join(
+        os.path.dirname(
             os.path.dirname(
                 os.path.dirname(
                     os.path.abspath(__file__)
                 )
             ),
-            args.tom_name,
-        )
+        ),
     )
     if tom_dir not in sys.path:
         sys.path.insert(0, tom_dir)
