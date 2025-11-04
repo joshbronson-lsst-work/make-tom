@@ -26,20 +26,21 @@ persistent storage from declarative manifests.
 
 These programs are defined in containers, which, when they are running
 in Kubernetes, are called pods. Pods can be annotated so that
-Kubernetes knows which of them run on ports. Kubernetes uses Docker, a
+Kubernetes knows which ports they expose. Kubernetes uses Docker, a
 lightweight framework for containerized processes, which allows it to
 treat relatively small pieces of code as independent machines with
 independent operating systems, complete with all of the dependencies
 they need and the ability to communicate with each other like physical
 machines.
 
-This flexiblity allows for a good deal of control over the environment
-of the processes deployed to Kubernetes clusters. It is easy to "turn
-it off and on," which helps make deployments reproducible. Kubernetes
-and Docker, similar to Java, seem to want to allow their users to
-"write once and run anywhere," and while they do not succeed, they
-eliminate some of the complexity of worrying about the underlying
-system's package versions, networking architecture, and other details.
+This flexibility allows for a good deal of control over the
+environment of the processes deployed to Kubernetes clusters. It is
+easy to "turn it off and on," which helps make deployments
+reproducible. Kubernetes and Docker, similar to Java, seem to want to
+allow their users to "write once and run anywhere," and while they do
+not succeed, they eliminate some of the complexity of worrying about
+the underlying system's package versions, networking architecture, and
+other details.
 
 Kubernetes and Docker are, in turn, implemented on lower‑level
 platforms (cloud providers or on‑prem). Kubernetes abstracts many
@@ -63,7 +64,7 @@ provider differences to reduce migration friction.
 
 
                         +-------------------------+ +-----------------+ +---------------------+ +---------------+
-    Platform            | Google Compute Platform | | Microsoft Azure | | Amazon Web Servcies | | Local Cluster |
+    Platform            | Google Cloud Platform | | Microsoft Azure | | Amazon Web Services | | Local Cluster |
                         +-------------------------+ +-----------------+ +---------------------+ +---------------+
 
 Helm is a relatively thin layer on top of Kubernetes that packages and
@@ -169,16 +170,15 @@ come in the form of a CSV with two columns: "Access key ID," and
 and paste the data from the CSV into the appropriate fields. Select
 the region you want from the list
 [here](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html). You
-may choose to simply use the zone closest to you unless you need a
-feature you need in another region, or unless the features you need
-are priced differently. Testing for this guide was done in the
-`us-west-1` region.
+may choose to simply use the region closest to you unless you need a
+feature that's only available or priced differently in another
+region. Testing for this guide was done in the `us-west-1` region.
 
 ### Installing eksctl
 
 Install eksctl using the instructions
 [here](https://docs.aws.amazon.com/eks/latest/eksctl/installation.html). This
-tool provides a ssimplified interface, compared to the AWS cli, for
+tool provides a simplified interface, compared to the AWS cli, for
 managing Kubernetes clusters, but you will still need the AWS cli tool
 for some steps.
 
@@ -192,7 +192,7 @@ you use AWS.
 
 Another option for a cloud provider is GKE, which is a cloud service
 provided by Google. To follow along using GKE, you will need a Google
-Cloud account. Google Compute Platform (GCP) provides the hosting
+Cloud account. Google Cloud Platform (GCP) provides the hosting
 (nodes that run your pods), storage (Persistent Disks for Postgres,
 Artifact Registry for images), and networking (load balancers and
 public IPs) used here.  macOS users can install the SDK with the PKG
@@ -203,24 +203,23 @@ computers accessible to themselves or the public.
 
 ### Account and Billing Setup
 
-Once you've decided you would like to create a Google Compute Platform
-account, navigate to https://cloud.google.com, or search for Google
-Compute Platform. If the terms and conditions are acceptable to you,
-create your account.
+Once you've decided you would like to create a GCP account, navigate
+to https://cloud.google.com, or search for GCP. If the terms and
+conditions are acceptable to you, create your account.
 
 After you've created an account, set up billing. When the author
 created an account in September 2025, billing could be started by
 clicking on a button that said "Try for free." Setting billing up
 still required a credit card.
 
-In the dropdown boxes, Google asked the following questions, an the
+In the dropdown boxes, Google asked the following questions, and the
 author answered them as follows:
 
 * Question: How would you like to get started today? Answer: Build
   production-ready solutions.
 * Question: What do you want to do with Google Cloud first? Answer:
   Build or deploy web or mobile applications.
-* Question: What are you trying to do with apps or websitse? Answer: I
+* Question: What are you trying to do with apps or websites? Answer: I
   want to host a website.
 
 The author is not sure what, if anything, would have been different if
@@ -230,8 +229,8 @@ the questions had been answered differently.
 
 Next, install the [gcloud commandline
 tool](https://cloud.google.com/sdk/docs/install).  There are multiple
-options available. The author chose to click on the targball for his
-system, gcloud-cloud-cli-linux-x86_64.tar.gz, and untar it and
+options available. The author chose to click on the tarball for his
+system, `google-cloud-cli-linux-x86_64.tar.gz`, and untar it and
 install:
 
     tar zxf google-cloud-cli-linux-x86_64.tar.gz
@@ -260,7 +259,7 @@ Before you deploy your TOM to the cloud, you will need to ensure that
 it meets the minimum requirements laid out in this subsection. 
 
 1. Make sure this repository is inside the directory for your TOM.
-2. For the docker container to build properly and push to your
+2. For the Docker container to build properly and push to your
    environment, the following should be added to a requrements.txt
    file at the base of your TOM, if any of these are not already
    present there, with the exceptions noted in the comments below:
@@ -333,24 +332,23 @@ below.
 
 The orchestration scripts, which reside in the scripts directory of
 this repository, can be run standalone, but they also include comments
-that help understand the process of deploying to the Google Compute
-Platform and running Kubernetes on top of that.
+that help understand the process of deploying to the GCP and running
+Kubernetes on top of that.
 
 After everything above has been run and configured, it should be
 possible to simply run the scripts. First, create the Kubernetes
-cluster inside Google Compute Engine. This is a blank slate on which
-Kubernetes can deploy its objects:
+cluster inside Google Kubernetes Engine. This is a blank slate on
+which Kubernetes can deploy its objects:
 
     bash scripts/create_kubernetes_cluster_gcp.sh
 
 It is possible that something in that script will fail due to changes
-in the Google Compute Platform API, differences in your environment,
-changed configuration, or other issues. If it fails, look at the
-comments near the commandline that failed. If you are able to resolve
-the issue, you should be able to simply rerun the script, which will
-pick up where it left off. If the error messages you see are related
-to timeouts, for example, it may make sense to simply try rerunning
-the script once.
+in the GCP API, differences in your environment, changed
+configuration, or other issues. If it fails, look at the comments near
+the commandline that failed. If you are able to resolve the issue, you
+should be able to simply rerun the script, which will pick up where it
+left off. If the error messages you see are related to timeouts, for
+example, it may make sense to simply try rerunning the script once.
 
 If you are running on GKE at this point, this is probably a good time
 to ensure that you have credentials to manipulate your GCP environment
@@ -371,7 +369,7 @@ while fixing any issues that arise while running it.
 ## Retrieving Your Static IP
 
 After your cluster has started, you can use the following command to
-retrieve the static IP address assigned to your django server
+retrieve the static IP address assigned to your Django server
 
     . scripts/common_config.sh ; kubectl -n "$kubernetes_namespace" get ingress 
 
@@ -464,8 +462,8 @@ TOM to the cloud in preparation for transfer, so use it carefully!
 That script will also delete all data on the TOM you've just spun
 up.
 
-The script uses Django's builtin `dumpddata` and `loaddata` commands,
-which have the adavantage of being fairly portable. But these commands
+The script uses Django's builtin `dumpdata` and `loaddata` commands,
+which have the advantage of being fairly portable. But these commands
 may not be fast enough for extremely large databases with, say,
 hundreds of thousands of entries. If better performance is needed
 during migration, [pgloader](https://pgloader.io) may be a good
@@ -493,7 +491,7 @@ runs every 5 minutes.
 
 # Troubleshooting
 
-With the exception fo the transfer_data script, the scripts above are
+With the exception for the transfer_data script, the scripts above are
 designed to be run over and over. Successive runs should push the
 system toward a good state and preserve that good state, whether or
 not the script fails. 
