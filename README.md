@@ -319,16 +319,19 @@ below.
 
     export tom_name=YOUR_TOM_NAME_HERE
     export tom_hostname=YOUR_SITE_HOSTNAME_HERE
+	export platform=PLATFORM_HERE
 
 - The tom\_name should match the name of your TOM as you originally
   created it.
-- The YOUR\_SITE\_HOSTNAME\_HERE should be the fully-qualified domain
-  name that you eventually want to point to your TOM. If you don't
-  have this yet, you can set it to what you would eventually like it
-  to be, or even to a test domain, but it will not be possible for
-  others to easily access your site due to security restrictions on
-  clients not accessing the site through the proper fully-qualified
-  domain name.
+- The string YOUR\_SITE\_HOSTNAME\_HERE should be replaced with the
+  fully-qualified domain name that you eventually want to point to
+  your TOM. If you don't have this yet, you can set it to what you
+  would eventually like it to be, or even to a test domain, but it
+  will not be possible for others to easily access your site due to
+  security restrictions on clients not accessing the site through the
+  proper fully-qualified domain name.
+- The string PLATFORM\_HERE should be replace with EKS or GKE,
+  depending on which you selected above.
 
 The orchestration scripts, which reside in the scripts directory of
 this repository, can be run standalone, but they also include comments
@@ -337,18 +340,22 @@ Kubernetes on top of that.
 
 After everything above has been run and configured, it should be
 possible to simply run the scripts. First, create the Kubernetes
-cluster inside Google Kubernetes Engine. This is a blank slate on
-which Kubernetes can deploy its objects:
+cluster inside AWS (EKS) or GCP (GKE). This is a blank slate on which
+Kubernetes can deploy its objects. Run the appropriate script:
 
-    bash scripts/create_kubernetes_cluster_gcp.sh
+    bash scripts/create_kubernetes_cluster_aws.sh # EKS
+
+OR
+
+    bash scripts/create_kubernetes_cluster_gcp.sh # GKE
 
 It is possible that something in that script will fail due to changes
-in the GCP API, differences in your environment, changed
-configuration, or other issues. If it fails, look at the comments near
-the commandline that failed. If you are able to resolve the issue, you
-should be able to simply rerun the script, which will pick up where it
-left off. If the error messages you see are related to timeouts, for
-example, it may make sense to simply try rerunning the script once.
+in the API, differences in your environment, changed configuration, or
+other issues. If it fails, look at the comments near the commandline
+that failed. If you are able to resolve the issue, you should be able
+to simply rerun the script, which will pick up where it left off. If
+the error messages you see are related to timeouts, for example, it
+may make sense to simply try rerunning the script once.
 
 If you are running on GKE at this point, this is probably a good time
 to ensure that you have credentials to manipulate your GCP environment
@@ -356,7 +363,9 @@ from the commandline:
 
     gcloud auth application-default login
 
-Once that is complete, deploy the Kubernetes cluster:
+Once that is complete, deploy the Kubernetes cluster. This will work
+in either platform as long as your `$platform` variable is set
+correctly above.
 
     export certmanager_email=YOUR_EMAIL_HERE 
     bash scripts/launch_kubernetes.sh
