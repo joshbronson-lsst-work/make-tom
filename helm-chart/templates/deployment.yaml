@@ -59,7 +59,7 @@ spec:
             - -lc
             - |
               set -e
-              for app in auth contenttypes sites django_comments django_tasks_database guardian; do
+              for app in auth contenttypes sites django_comments django_tasks_database guardian custom_code; do
                 python manage.py migrate "$app" --no-input
               done
               python manage.py migrate --no-input
