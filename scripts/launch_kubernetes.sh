@@ -224,7 +224,7 @@ else
     echo "|Building docker image ${image}"
     set -x
     pwd
-    docker build --platform linux/amd64 --build-arg TOM_NAME="$tom_name" -f "${proj_dir}/Dockerfile" -t "$image" ..
+    docker build --platform linux/amd64 --build-arg TOM_NAME="$tom_name" -f "${chart_dir}/Dockerfile" -t "$image" ..
     docker push "$image"
 fi
 
