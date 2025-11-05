@@ -202,20 +202,7 @@ else
 fi
 
 chart_dir="$(dirname "${proj_dir}")"
-fingerprint=$( (
-  cd .. && \
-  find . -type f \
-    ! -path './env/*' \
-    ! -path './.venv/*' \
-    ! -path './__pycache__/*' \
-    ! -name '*.pyc' \
-    ! -path './media/*' \
-    ! -path './staticfiles/*' \
-    ! -path './static/*' \
-    ! -path './tmp/*' \
-    ! -name 'db.sqlite3' \
-    -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}'
-) )
+fingerprint="${fingerprint:-tomdevimage}"
 if [ ! -z "${fingerprint:-}" ]; then
   computed_tag="tom-$(echo "${tom_name}" | tr '[A-Z]' '[a-z]')-$(echo "$fingerprint" | cut -c1-12)"
   image_tag="$computed_tag"
