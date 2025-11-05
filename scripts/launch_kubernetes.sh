@@ -215,6 +215,7 @@ fi
 { set +x; } 2>/dev/null
 echo "| Now build and push the image for the resolved tag."
 set -x
+tom_project_dir="$(dirname "${chart_dir}")"
 if docker manifest inspect "$image" >/dev/null 2>/dev/null; then
     { set +x; } 2>/dev/null
     echo "| OK. image ${image} already exists. Skipping build."
@@ -224,7 +225,7 @@ else
     echo "|Building docker image ${image}"
     set -x
     pwd
-    docker build --platform linux/amd64 --build-arg TOM_NAME="$tom_name" -f "${chart_dir}/Dockerfile" -t "$image" ..
+    docker build --platform linux/amd64 --build-arg TOM_NAME="$tom_name" -f "${chart_dir}/Dockerfile" -t "$image" "$tom_project_dir"
     docker push "$image"
 fi
 
