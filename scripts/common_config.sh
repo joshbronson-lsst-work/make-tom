@@ -24,7 +24,7 @@ if [ -z "$tom_name" ]; then
   set -x
   exit 1
 fi
-tom_name_lowercase="$(echo ${tom_name} | tr '[A-Z]' '[a-z]')"
+tom_name_lowercase="$(echo ${tom_name} | tr '[A-Z_]' '[a-z-]')"
 
 platform=${platform:-}
 if [[ "$platform" != "EKS" && "$platform" != "GKE" ]]; then
