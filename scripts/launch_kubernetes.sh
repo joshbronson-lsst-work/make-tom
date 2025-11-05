@@ -485,6 +485,6 @@ set -x
 helm upgrade --install tom "${chart_dir}/helm-chart"    \
      -n "$kubernetes_namespace"                         \
      --create-namespace                                 \
-     -f helm-chart/values-dev.yaml                      \
+     -f "${chart_dir}/helm-chart/values-dev.yaml"       \
      --wait                                             \
      "${tom_sets[@]}"
