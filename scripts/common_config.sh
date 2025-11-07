@@ -35,7 +35,7 @@ if [[ "$platform" != "EKS" && "$platform" != "GKE" ]]; then
 fi
 
 # region and zone
-project_id="$(echo ${project_id:-tom-${tom_name}-project} | tr '[A-Z]' '[a-z]')"
+project_id="$(echo ${project_id:-tom-${tom_name}-project} | tr '[A-Z_]' '[a-z-]')"
 if [[ "$platform" == "EKS" ]] ; then
     region=us-west-1
     zone=${zone:-usw1-az1}

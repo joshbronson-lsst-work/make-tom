@@ -202,7 +202,22 @@ else
 fi
 
 chart_dir="$(dirname "${proj_dir}")"
-fingerprint="${fingerprint:-tomdevimage}"
+tom_project_dir="$(dirname "${chart_dir}")"
+
+fingerprint=$( (
+  find "$tom_project_dir" -type f \
+    ! -path './env/*' \
+    ! -path './.venv/*' \
+    ! -path './__pycache__/*' \
+    ! -name '*.pyc' \
+    ! -path './media/*' \
+    ! -path './staticfiles/*' \
+    ! -path './static/*' \
+    ! -path './tmp/*' \
+    ! -name 'db.sqlite3' \
+    -exec stat -c '%Y' {} + | sort -n | tail -1 | xargs -I{} date '+%Y%M%d%H%M%S' -d @{}
+) )
+
 if [ ! -z "${fingerprint:-}" ]; then
   computed_tag="tom-$(echo "${tom_name}" | tr '[A-Z]' '[a-z]')-$(echo "$fingerprint" | cut -c1-12)"
   image_tag="$computed_tag"
@@ -215,7 +230,6 @@ fi
 { set +x; } 2>/dev/null
 echo "| Now build and push the image for the resolved tag."
 set -x
-tom_project_dir="$(dirname "${chart_dir}")"
 if docker manifest inspect "$image" >/dev/null 2>/dev/null; then
     { set +x; } 2>/dev/null
     echo "| OK. image ${image} already exists. Skipping build."
