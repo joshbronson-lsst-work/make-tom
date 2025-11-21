@@ -12,7 +12,7 @@ tom_dir="$(dirname "$(dirname $proj_dir)")"
 # Load some configuration that is common to both scripts. 
 . "${proj_dir}/common_config.sh"
 
-backend_name=tom-"$(echo ${tom_name} | tr '[A-Z]' '[a-z]')"
+backend_name=tom-"$(echo ${tom_name} | tr '[A-Z_]' '[a-z-]')"
 
 #--------------------------------------------------------------------------------
 # Migrate Data Products
