@@ -204,8 +204,8 @@ fi
 chart_dir="$(dirname "${proj_dir}")"
 tom_project_dir="$(dirname "${chart_dir}")"
 
-if ! stat -c . ; then 
-    stat_flags=("-x" "%Y")
+if stat -c . ; then
+    stat_flags=("-c" "%Y")
 else
     stat_flags=("-f" "%m")
 fi
