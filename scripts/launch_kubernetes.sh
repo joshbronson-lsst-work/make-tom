@@ -204,27 +204,38 @@ fi
 chart_dir="$(dirname "${proj_dir}")"
 tom_project_dir="$(dirname "${chart_dir}")"
 
-if stat -c . ; then
+if stat -c "%Y" . ; then
     stat_flags=("-c" "%Y")
-    date_fmt='+%Y%M%d%H%M%S'
+    fingerprint=$( (
+      find "$tom_project_dir" -type f \
+        ! -path './env/*' \
+        ! -path './.venv/*' \
+        ! -path './__pycache__/*' \
+        ! -name '*.pyc' \
+        ! -path './media/*' \
+        ! -path './staticfiles/*' \
+        ! -path './static/*' \
+        ! -path './tmp/*' \
+        ! -name 'db.sqlite3' \
+        -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date "+%Y%m%d%H%M%S" -d @{}
+) )
 else
     stat_flags=("-f" "%m")
-    date_fmt='+%Y%m%d%H%M%S'
-fi
 
-fingerprint=$( (
-  find "$tom_project_dir" -type f \
-    ! -path './env/*' \
-    ! -path './.venv/*' \
-    ! -path './__pycache__/*' \
-    ! -name '*.pyc' \
-    ! -path './media/*' \
-    ! -path './staticfiles/*' \
-    ! -path './static/*' \
-    ! -path './tmp/*' \
-    ! -name 'db.sqlite3' \
-    -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date "$date_fmt" -d @{}
+    fingerprint=$( (
+      find "$tom_project_dir" -type f \
+        ! -path './env/*' \
+        ! -path './.venv/*' \
+        ! -path './__pycache__/*' \
+        ! -name '*.pyc' \
+        ! -path './media/*' \
+        ! -path './staticfiles/*' \
+        ! -path './static/*' \
+        ! -path './tmp/*' \
+        ! -name 'db.sqlite3' \
+        -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date -t @{} "+%Y%m%d%H%M%S"
 ) )
+fi
 
 if [ ! -z "${fingerprint:-}" ]; then
   computed_tag="tom-$(echo "${tom_name}" | tr '[A-Z]' '[a-z]')-$(echo "$fingerprint" | cut -c1-12)"
