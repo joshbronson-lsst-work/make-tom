@@ -233,7 +233,7 @@ else
         ! -path './static/*' \
         ! -path './tmp/*' \
         ! -name 'db.sqlite3' \
-        -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date -t @{} "+%Y%m%d%H%M%S"
+        -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date -t {} "+%Y%m%d%H%M%S"
 ) )
 fi
 
