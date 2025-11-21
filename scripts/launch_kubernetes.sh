@@ -206,8 +206,10 @@ tom_project_dir="$(dirname "${chart_dir}")"
 
 if stat -c . ; then
     stat_flags=("-c" "%Y")
+    date_fmt='+%Y%M%d%H%M%S'
 else
     stat_flags=("-f" "%m")
+    date_fmt='+%Y%m%d%H%M%S'
 fi
 
 fingerprint=$( (
@@ -221,7 +223,7 @@ fingerprint=$( (
     ! -path './static/*' \
     ! -path './tmp/*' \
     ! -name 'db.sqlite3' \
-    -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date '+%Y%M%d%H%M%S' -d @{}
+    -exec stat "${stat_flags[@]}" {} + | sort -n | tail -1 | xargs -I{} date "$date_fmt" -d @{}
 ) )
 
 if [ ! -z "${fingerprint:-}" ]; then
