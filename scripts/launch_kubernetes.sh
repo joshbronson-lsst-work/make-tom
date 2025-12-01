@@ -425,6 +425,19 @@ if ! kubectl -n "$kubernetes_namespace" get secret tom-deploy-secrets 2>/dev/nul
     kubectl -n "$kubernetes_namespace" create secret generic tom-deploy-secrets --from-literal=placeholder=1
 fi
 
+if ! kubectl -n "$kubernetes_namespace" get secret django-secrets 2>/dev/null >/dev/null; then
+  if [ -n "${SECRET_KEY:-}" ]; then
+    SECRET_KEY="${SECRET_KEY}"
+  else
+    if command -v openssl >/dev/null 2>&1; then
+      SECRET_KEY="$(openssl rand -base64 32)"
+    else
+      SECRET_KEY="$(head -c 32 /dev/urandom | base64)"
+    fi
+  fi
+  kubectl -n "$kubernetes_namespace" create secret generic django-secrets --from-literal=secret-key="${SECRET_KEY}"
+fi
+
 if [[ "$letsencrypt_env" == staging ]]; then
     acme_hostname=acme-staging-v02.api
     certmanager_issuer_name=letsencrypt-staging
@@ -441,7 +454,7 @@ fi
 { set +x; } 2>/dev/null
 echo "|--------------------------------------------------------------------------------"
 echo "| Set up access to the Google storage bucket from the django pod. This"
-echo "| will allow the Django pod to manage data product binaries.a"
+echo "| will allow the Django pod to manage data product binaries."
 echo "| --------------------------------------------------------------------------------"
 set -x
 
@@ -482,6 +495,7 @@ tom_sets=(
      --set ingress.tls[0].hosts[0]="$tom_hostname"                                       \
      --set csrf_trusted_origins[0]="https://${tom_hostname}"                             \
      --set database.existingSecret=${database_secret_name:-tom-app-db}                   \
+     --set djangoSecrets.secret_name=django-secrets                                      \
      --set allowedHosts[0]="$tom_hostname"                                               \
      --set serviceAccount.name="$data_product_service_account_id"                        \
      --set serviceAccount.create=false                                                   \

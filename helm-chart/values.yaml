@@ -3,6 +3,9 @@
 # Declare variables to be passed into your templates.
 
 djangoDebug: true
+djangoSecrets:
+  secret_name: django-secrets
+  secret_key_key_name: secret-key
 
 gunicornWorkers: 2
 gunicornTimeout: 300
@@ -179,8 +182,6 @@ postgresql:
       limits:
         cpu: 400m
         memory: 512Mi
-
-secretKey: "changeme"
 
 # Google Cloud Storage bucket used for data products
 # This value will populate the GS_BUCKET_NAME environment variable in backend pods.

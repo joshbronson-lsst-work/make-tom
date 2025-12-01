@@ -138,5 +138,8 @@ Define shared database environment variables
 - name: DB_PORT
   value: {{ .Values.database.port | default "5432" | quote }}
 - name: SECRET_KEY
-  value: {{ .Values.secretKey | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.djangoSecrets.secret_name | quote }}
+      key: {{ .Values.djangoSecrets.secret_key_key_name | quote }}
 {{- end -}}
